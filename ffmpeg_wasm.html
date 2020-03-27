@@ -1,0 +1,111 @@
+<!--
+  Copyright 2020, Bart Butenaers
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<script type="text/javascript">
+    RED.nodes.registerType('ffmpeg_wasm',{
+        category: 'smart home',
+        color: '#E9967A',
+        defaults: {
+            name: {value:""},
+            command: {value:"", required:true},
+            bindings: {value: []}
+        },        
+        inputs:1,
+        outputs:1,
+        icon: "fluid.png",
+        label: function() {
+            return this.name||"FFmpeg CLI";
+        },
+        oneditprepare: function() {
+            var bindingList = $("#node-msg-binding-container").css('min-height','300px').css('min-width','250px').editableList({
+                header: $("<div>").css({"margin-left":"6px"}).append($.parseHTML(
+                    "<div style='width:22%; margin-left:5px; display: inline-grid'><b>Direction</b></div>" +
+                    "<div style='width:38%; margin-left:1px; display: inline-grid'><b>Message field</b></div>" +  
+                    "<div style='width:30%; margin-left:1px; display: inline-grid'><b>Virtual file name</b></div>" 
+                )),
+                addItem: function(container, i, binding) {
+                    // Add a new row to the editableList
+                    var row = $('<div/>').appendTo(container);
+                    
+                    // Column 1 : The direction
+                    var bindingTypeField = $('<select/>',{class:"node-msg-binding-direction",type:"text"}).css({"width":"22%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    $('<option />', {value: "input" , text: "Input" }).appendTo(bindingTypeField);
+                    $('<option />', {value: "output", text: "Output"}).appendTo(bindingTypeField);
+                    bindingTypeField.val(binding.direction || "input");
+                    
+                    // Column 2 : The message field 
+                    var msgField = $('<input/>',{class:"node-msg-binding-field",type:"text"}).css({"width":"38%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    var msgTypeField = $('<input/>',{class:"node-input-binding-payloadType",type:"hidden"}).appendTo(row);
+                    msgField.typedInput({
+                        default: "msg",
+                        typeField: msgTypeField,
+                        types: ["msg"]
+                    });           
+                    msgField.typedInput("value", binding.field || "payload");  
+               
+                    // Column 3 : The virtual file name
+                    var filenameField = $('<input/>',{class:"node-msg-binding-filename",type:"text",placeholder:"File name"}).css({"width":"30%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    filenameField.val(binding.filename);
+                },
+                removable: true
+            });
+            
+            // Add all the bindings into the editableList
+            if (this.bindings) {
+                this.bindings.forEach(function (binding, index) {
+                    bindingList.editableList('addItem', { direction: binding.direction, field: binding.field, filename:binding.filename });
+                });
+            }
+        },
+        oneditsave: function() {
+            var node = this;
+
+            // Copy all the bindings from the editableList to this node
+            node.bindings = [];
+            var bindingList = $("#node-msg-binding-container").editableList('items');
+            bindingList.each(function(i) {
+                var row = $(this);
+                node.bindings.push({
+                    direction : row.find(".node-msg-binding-direction").val(),
+                    field     : row.find(".node-msg-binding-field").val(),
+                    filename  : row.find(".node-msg-binding-filename").val()
+                });
+            });
+        },
+    });
+</script>
+
+<script type="text/x-red" data-template-name="ffmpeg_wasm">
+    <div class="form-row">
+        <label for="node-input-command"><i class="fa fa-terminal"></i> Command</label>
+        <input type="text" id="node-input-command" placeholder="Enter ffmpeg command">
+    </div>
+    <br>
+    <div class="form-row" style="margin-bottom: 0px;">
+        <label for="node-input-func"><i class="fa fa-list"></i> Bindings</label>
+        <input type="hidden" id="node-input-func">
+    </div>
+    <div class="form-row">
+        <!-- Table with msg field bindings -->
+        <ol id="node-msg-binding-container"></ol>
+    </div>
+    <br>
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="ffmpeg_wasm">
+    <p>A node to offer an FFMPEG command line interface.</p>
+</script>
+
