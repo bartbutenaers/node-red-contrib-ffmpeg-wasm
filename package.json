@@ -1,0 +1,26 @@
+{
+    "name"         : "node-red-contrib-ffmpeg-wasm",
+    "version"      : "1.0.0",
+    "description"  : "A Node-RED node to executed ffmpeg commands via WebAssembly (WASM)",
+    "dependencies": {
+      "@ffmpeg/ffmpeg": "0.7.0"
+    },
+    "author": {
+        "name": "Bart Butenaers"
+    },
+    "license": "Apache-2.0",
+    "keywords": [ "node-red", "ffmpeg", "wasm", "webassembly", "audio", "video", "convert" ],
+    "bugs": {
+        "url": "https://github.com/bartbutenaers/node-red-contrib-ffmpeg-wasm/issues"
+    },
+    "homepage": "https://github.com/bartbutenaers/node-red-contrib-ffmpeg-wasm",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/bartbutenaers/node-red-contrib-ffmpeg-wasm.git"
+    },
+    "node-red"     : {
+        "nodes": {
+            "ffmpeg_wasm": "ffmpeg_wasm.js"
+        }
+    }
+}
