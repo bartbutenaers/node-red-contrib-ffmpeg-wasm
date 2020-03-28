@@ -17,10 +17,12 @@
         defaults: {
             name: {value:""},
             command: {value:"", required:true},
+            loadAtStartup: {value:true},
             bindings: {value: []}
         },        
         inputs:1,
-        outputs:1,
+        outputs:2,
+        outputLabels: ["ffmpeg output", "worker status"],
         icon: "fluid.png",
         label: function() {
             return this.name||"FFmpeg CLI";
@@ -89,6 +91,10 @@
         <label for="node-input-command"><i class="fa fa-terminal"></i> Command</label>
         <input type="text" id="node-input-command" placeholder="Enter ffmpeg command">
     </div>
+    <div class="form-row">    
+        <input type="checkbox" id="node-input-loadAtStartup" style="display: inline-block; width: auto; vertical-align: top;">
+        <label for="node-input-loadAtStartup" style="width:70%;"> Load the wasm file automatically at startup</label> 
+    </div>
     <br>
     <div class="form-row" style="margin-bottom: 0px;">
         <label for="node-input-func"><i class="fa fa-list"></i> Bindings</label>
@@ -107,5 +113,22 @@
 
 <script type="text/x-red" data-help-name="ffmpeg_wasm">
     <p>A node to offer an FFMPEG command line interface.</p>
+    <p><strong>Command:</strong><br/>
+    The ffmpeg command to be used.  When the command contains filenames, this will be virtual in-memory files!  It are not physical files on the filesystem of the host!</p>
+    <p>Remark: It doesn't matter whether the command starts with <code>ffmpeg</code> or not...</p>
+    <p><strong>Load the wasm file automatically at startup:</strong><br/>
+    When selected, the background worker will be started automatically at startup (or after a deploy). When not selected, the background worker needs to be started by injecting a message with <code>msg.topic = "start_worker"</code></p>
+    <p><strong>Bindings:</strong><br/>
+    When filenames are being used in the ffmpeg command, those virtual files need to be binded to fields in the input/output messags.  Add a binding rule for each virtual file:
+        <ul>
+            <li><strong>Direction:</strong> Specifiy whether the direction of the binding:</li>
+                <ul>
+                    <li><strong>Input:</strong> The content of the <i>input</i> message field will be written into the virtual <i>input</i> file.</li>
+                    <li><strong>Output:</strong> The content of the virtual <i>output</i> file will be read and send in the <i>output</i> message field.</li>      
+                </ul>
+            <li><strong>Message field:</strong> The name of the field in the (input or output) message.</li>
+            <li><strong>Virtual file name:</strong> The name of the virtual file in the ffmpeg command.</li>       
+        </ul>
+    </p>
 </script>
 
