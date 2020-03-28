@@ -7,6 +7,8 @@ Run the following npm command in your Node-RED user directory (typically ~/.node
 npm install bartbutenaers/node-red-contrib-ffmpeg-wasm
 ```
 
+**CAUTION:* As this node uses `worker_threads` which was introduced in Node.js v10.5.0, please remember to add `--experimental-worker` if you are using Node.js v10, and you don't have to add anything if you are using ***Node.js v12***!
+
 ## TODO
 - [ ] currently node-red crashes when trying to read an unexisting file
 - [ ] allow placeholders to be used inside the command field
