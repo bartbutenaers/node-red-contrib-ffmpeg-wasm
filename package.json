@@ -3,7 +3,7 @@
     "version"      : "1.0.0",
     "description"  : "A Node-RED node to executed ffmpeg commands via WebAssembly (WASM)",
     "dependencies": {
-      "@ffmpeg/ffmpeg": "0.7.0"
+      "@ffmpeg/ffmpeg": "^0.7.0"
     },
     "author": {
         "name": "Bart Butenaers"
