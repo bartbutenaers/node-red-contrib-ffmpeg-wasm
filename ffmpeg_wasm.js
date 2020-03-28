@@ -61,7 +61,7 @@
             node.worker.load().then(function() {
                 node.status({fill:'green', shape:'dot', text:'ready'});
                 node.send([null, {payload: "started", topic: "started"}]);
-                node.workerStarted = false;
+                node.workerStarted = true;
             }).catch(function(error) {
                 node.error("Error when starting worker: " + error);
                 node.status({fill:'red', shape:'dot', text:'starting failed'});
