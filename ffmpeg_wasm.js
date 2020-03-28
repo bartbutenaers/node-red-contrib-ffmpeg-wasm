@@ -16,43 +16,103 @@
  module.exports = function(RED) {
     const { createWorker } = require('@ffmpeg/ffmpeg');
     
+    // TODO's:
+    // - currently node-red crashes when trying to read an unexisting file
+    // - allow placeholders to be used inside the command field
+    // - stopping an rtsp stream should be able via stopping the running command, not terminating the worker
+    //   (otherwise the entire wasm need to be loaded again afterwards)
+    // - support multiple ffmpeg nodes in a flow: probably using the jobid
+    // - is it possible to mount a file of the host disc, for large files?
+    // - check cpu and memory usage
+    // - compare performance to a native C ffmpeg installation
+
+
+    
     function FFmpegWasmNode(config) {
         RED.nodes.createNode(this, config);
-        this.command    = config.command;
-        this.bindings   = config.bindings;
-        this.wasmLoaded = false;
-        this.busy       = false;
+        this.command       = config.command;
+        this.bindings      = config.bindings;
+        this.workerStarted = false;
+        this.busy          = false;
 
         var node = this;
+        
+        // TODO remove
+        const { setLogging } = require('@ffmpeg/ffmpeg');
+        setLogging(true);
         
         // When the command starts with "ffmpeg " then remove that part of the command
         node.command = node.command.replace(/^ffmpeg /,"");
         
-        node.status({fill:'yellow', shape:'ring', text:'loading ...'});
+        node.status({fill:'red', shape:'dot', text:'stopped'});
         
-        if (!node.worker) {
+        function startWorker(node) {
+            if (node.worker) {
+                console.log("No need to start the worker, because it was started already");
+                return;
+            }
+            
+            node.status({fill:'yellow', shape:'ring', text:'starting ...'});
+            
             // Create an ffmpeg worker (i.e. a child process in NodeJs).
             node.worker = createWorker();
 
             // It takes some time to load the wasm
             node.worker.load().then(function() {
-                node.wasmLoaded = true;
                 node.status({fill:'green', shape:'dot', text:'ready'});
-            });
+                node.send([null, {payload: "started", topic: "started"}]);
+                node.workerStarted = false;
+            }).catch(function(error) {
+                node.error("Error when starting worker: " + error);
+                node.status({fill:'red', shape:'dot', text:'starting failed'});
+            }).finally(function() {
+            });              
         }
-        else {
-            console.log("node.worker was already loaded");
+        
+        function stopWorker(node) {
+            if (!node.worker) {
+                console.log("No need to stop the worker, because it was not running yet");
+                return;
+            }
+            
+            node.status({fill:'yellow', shape:'ring', text:'stopping ...'});
+            
+            node.worker.terminate().then(function() {
+                node.status({fill:'red', shape:'dot', text:'stopped'});
+                node.send([null, {payload: "stopped", topic: "stopped"}]);
+                node.busy = false;
+                node.workerStarted = false;
+                node.worker = null;
+            }).catch(function(error) {
+                node.error("Error when closing worker: " + error);
+                node.status({fill:'red', shape:'dot', text:'stopping failed'});
+            }).finally(function() {
+            });     
+        }
+        
+        if (config.loadAtStartup) {
+            startWorker(node);
         }
 
         node.on("input", async function(msg) {
             var inputImage = msg.payload;
+            
+            if (msg.topic === "start_worker") {
+                startWorker(node);
+                return;
+            }
+            
+            if (msg.topic === "stop_worker") {
+                stopWorker(node);
+                return;
+            }
             
             if (!node.worker) {
                 node.warn("Ignore input message since the worker is not available yet");
                 return;
             }
             
-            if (!node.wasmLoaded) {
+            if (!node.workerStarted) {
                 node.warn("Ignore input message since the wasm module is not loaded yet");
                 return;
             }
@@ -126,9 +186,13 @@
                     }
                 }
                 
-                node.send(msg);
+                node.send([msg, null]);
 
-                // TODO should we remove the files ???????       
+                // Remove all the (input and output) files
+                for (var j = 0; j < node.bindings.length; j++) {
+                    var binding = node.bindings[j];
+                    await node.worker.remove(binding.filename);
+                }
             }).catch(function(error) {
                 node.error("Error during ffmpeg processing: " + error);
             }).finally(function() {
@@ -139,20 +203,7 @@
         
         node.on("close", function() { 
             var node = this;
-            
-            if (node.worker) {
-                debugger;
-                node.worker.terminate().then(function() {
-                    node.status({fill:'orange', shape:'dot', text:'terminated'});
-                }).catch(function(error) {
-                    node.error("Error when closing worker: " + error);
-                    node.status({fill:'orange', shape:'dot', text:'termination failed'});
-                }).finally(function() {
-                    node.busy = false;
-                    node.wasmLoaded = false;
-                });
-            }
-            node.status({});
+            stopWorker(node);
         });
     }
 
